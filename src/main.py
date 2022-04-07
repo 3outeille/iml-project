@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import os
+from sklearn.utils import shuffle
 
 def load_dataset(path):
     train, labels = [], []
@@ -19,7 +20,16 @@ def load_dataset(path):
             train.append(img)
             labels.append(label)
 
-    return train, labels
+    return shuffle(train, labels)
+
+def create_mask(img):
+    selector = (img[...,0] == 255) & (img[...,1] == 255) & (img[...,2] == 255)
+    return selector
 
 if __name__ == "__main__":
     train, labels = load_dataset("../dataset/train")
+    
+
+    masks = [create_mask(img) for img in train]
+    
+
