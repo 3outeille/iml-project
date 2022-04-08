@@ -1,12 +1,13 @@
+import os
+
 import cv2
 import numpy as np
-import os
 from sklearn.cluster import KMeans
 from sklearn.utils import shuffle
 
 def load_dataset(path):
     train, labels = [], []
-    
+
     for directory in os.listdir(path):
         if directory == '.DS_Store':
             continue
@@ -46,15 +47,19 @@ def create_kmeans(super_sample):
     kmeans.fit(super_sample)
     return kmeans
 
-if __name__ == "__main__":
+
+def main():
     np.random.seed(42)
 
-    train, labels = load_dataset("../dataset/train")
+    train, _labels = load_dataset("../dataset/train")
 
     masks = [create_mask(img) for img in train]
-    
+
     super_sample = create_super_sample(train, masks)
 
     kmeans = create_kmeans(super_sample)
 
     print(kmeans.cluster_centers_)
+
+if __name__ == "__main__":
+    main()

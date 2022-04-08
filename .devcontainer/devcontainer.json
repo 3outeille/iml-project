@@ -28,7 +28,12 @@
 		"python.linting.mypyPath": "/usr/local/py-utils/bin/mypy",
 		"python.linting.pycodestylePath": "/usr/local/py-utils/bin/pycodestyle",
 		"python.linting.pydocstylePath": "/usr/local/py-utils/bin/pydocstyle",
-		"python.linting.pylintPath": "/usr/local/py-utils/bin/pylint"
+		"python.linting.pylintPath": "/usr/local/py-utils/bin/pylint",
+		"python.linting.pylintArgs": [
+			"--disable=missing-class-docstring",
+			"--disable=missing-function-docstring",
+			"--disable=missing-module-docstring"
+		]
 	},
 
 	// Add the IDs of extensions you want installed when the container is created.
