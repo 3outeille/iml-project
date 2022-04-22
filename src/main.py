@@ -51,7 +51,7 @@ def create_kmeans(super_sample):
     kmeans.fit(super_sample)
     return kmeans
 
-def extract_histograms(kmeans, imgs):
+def extract_histograms_color(kmeans, imgs):
     masks = [create_mask(img) for img in imgs]
 
     label_maps = [kmeans.predict(img[mask]) for (img, mask) in zip(imgs, masks)]
@@ -61,21 +61,53 @@ def extract_histograms(kmeans, imgs):
     
 def create_model(img_train, label_train):
 
-    masks = [create_mask(img) for img in img_train]
-    super_sample = create_super_sample(img_train, masks)
+    def color_extractor():
+        masks = [create_mask(img) for img in img_train]
+        super_sample = create_super_sample(img_train, masks)
 
-    print('Training Kmeans')
-    kmeans = create_kmeans(super_sample)
+        print('Training Kmeans')
+        kmeans = create_kmeans(super_sample)
+        return kmeans
 
-    # color_lut = np.uint8(kmeans.cluster_centers_)
-    print('Creating histograms')
-    histograms_train = extract_histograms(kmeans, img_train)
-    
+    def shape_extractor():
+        orb = cv2.ORB_create()
+
+        list_descriptors = []
+
+        for img in img_train:
+            gray_img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+            keypoints = orb.detect(gray_img, None)
+            keypoints, descriptors = orb.compute(gray_img, keypoints)
+
+            indices = np.random.choice(descriptors.shape[0], 50, replace=False)
+            desc_samples = descriptors[indices]
+            list_descriptors.append(desc_samples)
+
+        super_sample = np.vstack(list_descriptors)
+        kmeans = create_kmeans(super_sample)
+        return kmeans
+        
+    kmeans_shape = shape_extractor()
+    kmeans_color = color_extractor()
+
+    print('Creating Color histograms')
+    color_histograms_train = extract_histograms_color(kmeans_color, img_train)
+
+    # print('Creating Shape histograms')
+    # shape_histograms_train = extract_histograms_shape(kmeans_shape, img_train)
+
+    # concat histograms of color + shape:
+    histograms_train = color_histograms_train #+ shape_histograms_train
+
     clf = KNeighborsClassifier(n_neighbors=1)
+    # clf = DummyClassifier()
     clf.fit(histograms_train, label_train)
 
     def model(img_test):
-        histograms_test = extract_histograms(kmeans, img_test)
+        histograms_test = extract_histograms_color(kmeans_color, img_test)
+        # shape_test = extract_shape(kmeans_shape, img_test)
+
+        # concat histograms + shape
         
         # dist_mat = cdist(histograms_test, histograms_train, metric='cosine')
         # idx_of_best_matches_per_row = np.argsort(dist_mat, axis=1)
@@ -140,8 +172,8 @@ def accuracy_test(dataset_path):
     print("accuracy:", accuracy)
 
 def main(dataset_path, test_path):
-    live(dataset_path, test_path)
-    # accuracy_test(dataset_path)
+    # live(dataset_path, test_path)
+    accuracy_test(dataset_path)
 
 if __name__ == "__main__":
     main("../dataset/train", "../tests")
