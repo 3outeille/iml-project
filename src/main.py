@@ -58,7 +58,22 @@ def extract_histograms_color(kmeans, imgs):
     histograms = np.array([np.bincount(lm, minlength=len(kmeans.cluster_centers_)) / len(lm) for lm in label_maps], dtype=np.float64)
 
     return histograms
-    
+
+def extract_histograms_shape(kmeans, imgs):
+    histograms = []
+    orb = cv2.ORB_create()
+
+    for img in imgs:
+        gray_img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        keypoints = orb.detect(gray_img, None)
+        keypoints, descriptors = orb.compute(gray_img, keypoints)
+        bin_assignment = kmeans.predict(descriptors)
+        img_feats = np.zeros(200)
+        for id_assign in bin_assignment:
+            img_feats[id_assign] += 1
+        histograms.append(img_feats)
+    return np.array(histograms)
+        
 def create_model(img_train, label_train):
 
     def color_extractor():
@@ -79,7 +94,8 @@ def create_model(img_train, label_train):
             keypoints = orb.detect(gray_img, None)
             keypoints, descriptors = orb.compute(gray_img, keypoints)
 
-            indices = np.random.choice(descriptors.shape[0], 50, replace=False)
+            # indices = np.random.choice(descriptors.shape[0], 50, replace=False)
+            indices = np.random.randint(descriptors.shape[0], size=50)
             desc_samples = descriptors[indices]
             list_descriptors.append(desc_samples)
 
@@ -93,8 +109,8 @@ def create_model(img_train, label_train):
     print('Creating Color histograms')
     color_histograms_train = extract_histograms_color(kmeans_color, img_train)
 
-    # print('Creating Shape histograms')
-    # shape_histograms_train = extract_histograms_shape(kmeans_shape, img_train)
+    print('Creating Shape histograms')
+    shape_histograms_train = extract_histograms_shape(kmeans_shape, img_train)
 
     # concat histograms of color + shape:
     histograms_train = color_histograms_train #+ shape_histograms_train
