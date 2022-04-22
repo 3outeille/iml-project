@@ -5,7 +5,9 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from scipy.spatial.distance import cdist
 from sklearn.cluster import KMeans
+from sklearn.dummy import DummyClassifier
 from sklearn.utils import shuffle
+from sklearn.neighbors import KNeighborsClassifier
 
 def load_dataset(path):
     train, labels = [], []
@@ -48,30 +50,39 @@ def create_kmeans(super_sample):
     kmeans = KMeans(n_clusters=24, random_state=42)
     kmeans.fit(super_sample)
     return kmeans
+
+def extract_histograms(kmeans, imgs):
+    masks = [create_mask(img) for img in imgs]
+
+    label_maps = [kmeans.predict(img[mask]) for (img, mask) in zip(imgs, masks)]
+    histograms = np.array([np.bincount(lm, minlength=len(kmeans.cluster_centers_)) / len(lm) for lm in label_maps], dtype=np.float64)
+
+    return histograms
     
 def create_model(img_train, label_train):
-    masks_train = [create_mask(img) for img in img_train]
 
-    super_sample = create_super_sample(img_train, masks_train)
+    masks = [create_mask(img) for img in img_train]
+    super_sample = create_super_sample(img_train, masks)
 
     print('Training Kmeans')
     kmeans = create_kmeans(super_sample)
 
     # color_lut = np.uint8(kmeans.cluster_centers_)
     print('Creating histograms')
-    labels_maps_train = [kmeans.predict(img[mask]) for (img, mask) in zip(img_train, masks_train)]
-    color_histograms_train = np.array([np.bincount(lm, minlength=len(kmeans.cluster_centers_)) / len(lm) for lm in labels_maps_train], dtype=np.float64)
+    histograms_train = extract_histograms(kmeans, img_train)
+    
+    clf = KNeighborsClassifier(n_neighbors=1)
+    clf.fit(histograms_train, label_train)
 
     def model(img_test):
-        masks_test = [create_mask(img) for img in img_test]
-        labels_maps_test = [kmeans.predict(img[mask]) for (img, mask) in zip(img_test, masks_test)]
-        color_histograms_test = np.array([np.bincount(lm, minlength=len(kmeans.cluster_centers_)) / len(lm) for lm in labels_maps_test], dtype=np.float64)
+        histograms_test = extract_histograms(kmeans, img_test)
         
-        dist_mat = cdist(color_histograms_test, color_histograms_train, metric='cosine')
-        idx_of_best_matches_per_row = np.argsort(dist_mat, axis=1)
+        # dist_mat = cdist(histograms_test, histograms_train, metric='cosine')
+        # idx_of_best_matches_per_row = np.argsort(dist_mat, axis=1)
 
-        indexes = idx_of_best_matches_per_row[:, 0]
-        return np.array(label_train)[indexes]
+        # indexes = idx_of_best_matches_per_row[:, 0]
+        # return np.array(label_train)[indexes]
+        return clf.predict(histograms_test)
 
     return model
 
@@ -130,7 +141,7 @@ def accuracy_test(dataset_path):
 
 def main(dataset_path, test_path):
     live(dataset_path, test_path)
-    accuracy_test(dataset_path)
+    # accuracy_test(dataset_path)
 
 if __name__ == "__main__":
     main("../dataset/train", "../tests")
