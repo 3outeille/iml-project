@@ -1,9 +1,9 @@
+import pdb
 import cv2
 from src.utils import *
 
 import numpy as np
 from sklearn.model_selection import train_test_split
-from scipy.spatial.distance import cdist
 from sklearn.cluster import KMeans
 from sklearn.dummy import DummyClassifier
 from sklearn.neighbors import KNeighborsClassifier
@@ -85,11 +85,11 @@ if __name__ == "__main__":
     np.random.seed(RANDOM_SEED)
 
     dataset, labels = load_dataset("./dataset/train")
-    # TODO: Data augmentation ?
     img_train, img_test, label_train, label_test = train_test_split(dataset, labels, test_size=0.2, random_state=42, stratify=labels)
-
+    img_train_aug = dataset_augmentation(img_train)
+    
     print("Create feature extractor ...\n")
-    color_feature_extractor, shape_feature_extractor = feature_extractor(img_train)
+    color_feature_extractor, shape_feature_extractor = feature_extractor(img_train_aug)
     
     # FIXME: Vstack seems to work as expected but investigate why it breaks on train().
     fused_feature_extractor = feature_extractor_fusion(color_feature_extractor, shape_feature_extractor)
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     classifiers = {"knn_classifier": KNeighborsClassifier(n_neighbors=N_NEIGHBORS), "dummy_classifier": DummyClassifier()}
 
     for name, clf in classifiers.items():
-        train(clf, fused_feature_extractor(img_train), label_train)
+        train(clf, fused_feature_extractor(img_train_aug), label_train)
         prediction, accuracy = evaluate(clf, fused_feature_extractor(img_test), label_test)
         print(f"accuracy = {accuracy}\n")
         dump_results(prediction, label_test, f"{name}-results")
