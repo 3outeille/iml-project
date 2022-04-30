@@ -86,18 +86,16 @@ if __name__ == "__main__":
 
     dataset, labels = load_dataset("./dataset/train")
     img_train, img_test, label_train, label_test = train_test_split(dataset, labels, test_size=0.2, random_state=42, stratify=labels)
+
     img_train_aug = dataset_augmentation(img_train)
     
     print("Create feature extractor ...\n")
     color_feature_extractor, shape_feature_extractor = feature_extractor(img_train_aug)
-    
-    # FIXME: Vstack seems to work as expected but investigate why it breaks on train().
+
     fused_feature_extractor = feature_extractor_fusion(color_feature_extractor, shape_feature_extractor)
 
     print("Train classifier on features ...\n")
-    # classifiers = {"dummy_classifier" : DummyClassifier(), "knn_classifier": KNeighborsClassifier(n_neighbors=1)}
-    # classifiers = {"dummy_classifier" : DummyClassifier()}
-    classifiers = {"knn_classifier": KNeighborsClassifier(n_neighbors=N_NEIGHBORS), "dummy_classifier": DummyClassifier()}
+    classifiers = {"dummy_classifier": DummyClassifier(), "knn_classifier": KNeighborsClassifier(n_neighbors=N_NEIGHBORS)}
 
     for name, clf in classifiers.items():
         train(clf, fused_feature_extractor(img_train_aug), label_train)
