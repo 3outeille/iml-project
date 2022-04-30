@@ -76,7 +76,7 @@ def dataset_augmentation(dataset):
         return np.array(sk.util.random_noise(img))
 
     # dictionary of the transformations we defined earlier
-    available_transformations = [random_rotation]
+    available_transformations = [random_rotation, random_noise]
 
     dataset_aug = []
     for img in dataset:
