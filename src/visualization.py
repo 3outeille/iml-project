@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import cdist
 
-def visualize_features(color_feature_extractor, img_train, img_test):
+def visualize_features(color_feature_extractor, img_train, img_test, n=10):
     histogram_train  = color_feature_extractor(img_train)
     histogram_test  = color_feature_extractor(img_test)
     dist_mat = cdist(histogram_test, histogram_train, metric='cosine')
@@ -12,7 +12,7 @@ def visualize_features(color_feature_extractor, img_train, img_test):
     interesting_bubble_ids = range(len(histogram_test))
     idx_of_best_matches_per_row = np.argsort(dist_mat, axis=1)
 
-    for ii in interesting_bubble_ids[:3]:
+    for ii in interesting_bubble_ids[:n]:
         plt.figure(figsize=(12,8))
         columns = max_res + 1
         plt.subplot(1, columns, 1)

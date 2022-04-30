@@ -1,4 +1,3 @@
-import pdb
 import cv2
 from src.utils import *
 
@@ -8,6 +7,12 @@ from scipy.spatial.distance import cdist
 from sklearn.cluster import KMeans
 from sklearn.dummy import DummyClassifier
 from sklearn.neighbors import KNeighborsClassifier
+
+SHAPE_DIMENSION = 24
+SHAPE_KEYPOINTS = 200
+COLOR_DIMENSION = 24
+RANDOM_SEED = 42
+N_NEIGHBORS = 1
 
 def extract_color_feature_histogram(extractor, imgs):
     masks = [create_mask(img) for img in imgs]
@@ -24,19 +29,20 @@ def extract_shape_feature_histogram(extractor, imgs):
         keypoints = orb.detect(gray_img, None)
         keypoints, descriptors = orb.compute(gray_img, keypoints)
         bin_assignment = extractor.predict(descriptors)
-        # Needs to be 24 to match kmeans_color nb of clusters
-        img_feats = np.zeros(24)
+        img_feats = np.zeros(SHAPE_DIMENSION)
         for id_assign in bin_assignment:
             img_feats[id_assign] += 1
         histograms.append(img_feats)
-    return np.array(histograms)
+
+    vec = np.array(histograms)
+    return vec / SHAPE_KEYPOINTS
 
 def feature_extractor(img_train):
 
     def color_extractor():
         masks = [create_mask(img) for img in img_train]
         super_sample = create_super_sample(img_train, masks)
-        kmean_color = KMeans(n_clusters=24, random_state=42)
+        kmean_color = KMeans(n_clusters=COLOR_DIMENSION, random_state=RANDOM_SEED)
         kmean_color.fit(super_sample)
         return kmean_color
 
@@ -49,12 +55,12 @@ def feature_extractor(img_train):
             gray_img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
             keypoints = orb.detect(gray_img, None)
             keypoints, descriptors = orb.compute(gray_img, keypoints)
-            indices = np.random.randint(descriptors.shape[0], size=200)
+            indices = np.random.randint(descriptors.shape[0], size=SHAPE_KEYPOINTS)
             desc_samples = descriptors[indices]
             list_descriptors.append(desc_samples)
 
         super_sample = np.vstack(list_descriptors)
-        kmean_shape = KMeans(n_clusters=24, random_state=42)
+        kmean_shape = KMeans(n_clusters=SHAPE_DIMENSION, random_state=RANDOM_SEED)
         kmean_shape.fit(super_sample)
         return kmean_shape
 
@@ -64,8 +70,7 @@ def feature_extractor(img_train):
     return lambda img: extract_color_feature_histogram(kmean_color, img), lambda img: extract_shape_feature_histogram(kmean_shape, img)
 
 def feature_extractor_fusion(color_feature_extractor, shape_feature_extractor):
-    # return lambda img: np.vstack((color_feature_extractor(img), shape_feature_extractor(img)))
-    return lambda img: shape_feature_extractor(img)
+    return lambda img: np.hstack((color_feature_extractor(img), shape_feature_extractor(img)))
 
 def train(classifer, feature_histogram, label_train):
     # TODO: Cross validation ?
@@ -77,7 +82,7 @@ def evaluate(classifier, feature_histogram, label):
     return prediction, accuracy
 
 if __name__ == "__main__":
-    np.random.seed(42)
+    np.random.seed(RANDOM_SEED)
 
     dataset, labels = load_dataset("./dataset/train")
     # TODO: Data augmentation ?
@@ -92,7 +97,7 @@ if __name__ == "__main__":
     print("Train classifier on features ...\n")
     # classifiers = {"dummy_classifier" : DummyClassifier(), "knn_classifier": KNeighborsClassifier(n_neighbors=1)}
     # classifiers = {"dummy_classifier" : DummyClassifier()}
-    classifiers = {"knn_classifier": KNeighborsClassifier(n_neighbors=1)}
+    classifiers = {"knn_classifier": KNeighborsClassifier(n_neighbors=N_NEIGHBORS), "dummy_classifier": DummyClassifier()}
 
     for name, clf in classifiers.items():
         train(clf, fused_feature_extractor(img_train), label_train)
