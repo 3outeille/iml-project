@@ -41,8 +41,7 @@ def extract_shape_feature_moments(imgs):
 
         hu_moments = cv2.HuMoments(moments).flatten()
 
-        for j in range(0, 7):
-            hu_moments[j] = -np.sign(hu_moments[j]) * np.log10(np.abs(hu_moments[j])) if hu_moments[j] != 0 else 0
+        hu_moments = -np.sign(hu_moments) * np.log10(np.abs(hu_moments))
 
         res.append(hu_moments)
 
