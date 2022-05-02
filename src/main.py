@@ -17,7 +17,7 @@ COLOR_DIMENSION = 24
 PONDERATION = 0
 RANDOM_SEED = 42
 N_NEIGHBORS = 1
-MODE = 'orb'
+MODE = 'moments'
 
 def extract_color_feature_histogram(extractor, imgs):
     masks = [create_mask(img) for img in imgs]
@@ -29,21 +29,22 @@ def extract_shape_feature_moments(imgs):
     res = []
 
     for i, img in enumerate(imgs):
-        gray_img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-        # gauss = cv2.GaussianBlur(gray_img, (3, 3), 0)
-        _,thresh = cv2.threshold(gray_img,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-        canny = cv2.Canny(thresh, 100, 200)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        img = cv2.copyMakeBorder(img, 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=255)
+        img = cv2.GaussianBlur(img, (5, 5), 0)
+        _, img = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        img = cv2.Canny(img, 100, 200)
 
-        plt.imsave(f'./test/{i}.png', canny, cmap='gray')
+        # plt.imsave(f'./test/{i}.png', img, cmap='gray')
 
-        moments = cv2.moments(canny)
+        moments = cv2.moments(img)
 
-        hu_moments = cv2.HuMoments(moments)
+        hu_moments = cv2.HuMoments(moments).flatten()
 
         for j in range(0, 7):
-            hu_moments[j] = np.log10(np.abs(hu_moments[j])) if hu_moments[j] != 0 else 0
+            hu_moments[j] = -np.sign(hu_moments[j]) * np.log10(np.abs(hu_moments[j])) if hu_moments[j] != 0 else 0
 
-        res.append(hu_moments.flatten())
+        res.append(hu_moments)
 
     res = np.array(res)
 
