@@ -3,12 +3,7 @@ import os
 from matplotlib.style import available
 from sklearn.utils import shuffle
 import numpy as np
-
-# image processing library
-import skimage as sk
-from skimage import transform
-from skimage import util
-from skimage import io
+import copy
 
 def load_dataset(path):
     train, labels = [], []
@@ -43,11 +38,12 @@ def load_test_images(path):
 
     return img_test, filenames
 
-def dataset_augmentation(dataset):
+def dataset_augmentation(dataset, labels, transformation_per_image=5):
     def random_rotation(img):
-        # pick a random degree of rotation between 180% on the left and 180% on the right
+        # pick a random degree of rotation between 50% on the left and 50% on the right
         random_degree = np.random.uniform(-180, 180)
-        
+
+        # Rotate image without cutting sides off    
         height, width = img.shape[:2]
         image_center = (width / 2, height / 2)
 
@@ -64,26 +60,37 @@ def dataset_augmentation(dataset):
 
         rotated_img = cv2.warpAffine(img, rotation_mat, (bound_w, bound_h), borderMode = cv2.BORDER_CONSTANT, borderValue=[255, 255,255])
 
-        (h,w,c) = rotated_img.shape
-        cropped_rotated_img = []
+        (h,w,_) = rotated_img.shape
+        rows = []
         for i in range(h):
-            if (rotated_img[i, :w, :] != 255).any():
-                cropped_rotated_img.append(rotated_img[i, :w, :])
-        return np.array(cropped_rotated_img)
+            if (rotated_img[i, :, :] != 255).any():
+                rows.append(rotated_img[i, :, :])
+        
+        rows = np.array(rows)
+        
+        cropped_img = []
+        for j in range(w):
+            if (rows[:, j, :] != 255).any():
+                cropped_img.append(rows[:, j, :])
+        
+        return np.array(cropped_img)
+    
+    def random_resize(img):
+        h, w, _ = img.shape
+        random_size =  np.random.uniform(1.5, 3.)
+        return cv2.resize(img, (int(w/random_size), int(h/random_size)))
 
-    def random_noise(img):
-        # add random noise to the image
-        return sk.util.random_noise(img)
+    available_transformations = [random_rotation, random_resize]
 
-    # dictionary of the transformations we defined earlier
-    available_transformations = [random_rotation]
-
-    dataset_aug = []
-    for img in dataset:
-        for transformation in available_transformations:
-            dataset_aug.append(transformation(img))
-
-    return dataset_aug
+    dataset_aug, labels_aug = copy.deepcopy(dataset), copy.deepcopy(labels)
+    
+    for transformation in available_transformations:
+        for img, label in zip(dataset, labels):
+            for _ in range(transformation_per_image):
+                dataset_aug.append(transformation(img))
+                labels_aug.append(label)
+    
+    return dataset_aug, labels_aug
 
 def dump_results(results, filenames_test, path):
     with open(path, 'w') as file:

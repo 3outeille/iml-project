@@ -1,7 +1,6 @@
-import pdb
-import cv2
 from src.utils import *
 
+import cv2
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.cluster import KMeans
@@ -10,14 +9,18 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC as SVM
 import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.gaussian_process.kernels import RBF
+from joblib import dump, load
 
 SHAPE_DIMENSION = 48
 SHAPE_KEYPOINTS = 96
 COLOR_DIMENSION = 24
 PONDERATION = 0
 RANDOM_SEED = 42
-N_NEIGHBORS = 1
-MODE = 'moments'
+N_NEIGHBORS = 3
+N_DEPTH = 8
+MODE = 'orb'
+SAVE_SESSION = False
 
 def extract_color_feature_histogram(extractor, imgs):
     masks = [create_mask(img) for img in imgs]
@@ -28,14 +31,12 @@ def extract_color_feature_histogram(extractor, imgs):
 def extract_shape_feature_moments(imgs):
     res = []
 
-    for i, img in enumerate(imgs):
+    for img in imgs:
         img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
         img = cv2.copyMakeBorder(img, 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=255)
         img = cv2.GaussianBlur(img, (5, 5), 0)
         _, img = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         img = cv2.Canny(img, 100, 200)
-
-        # plt.imsave(f'./test/{i}.png', img, cmap='gray')
 
         moments = cv2.moments(img)
 
@@ -56,6 +57,9 @@ def extract_shape_feature_histogram(extractor, imgs):
     for img in imgs:
         gray_img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
         keypoints = orb.detect(gray_img, None)
+        if keypoints == ():
+            histograms.append(np.zeros(SHAPE_DIMENSION))
+            continue
         keypoints, descriptors = orb.compute(gray_img, keypoints)
         bin_assignment = extractor.predict(descriptors)
         img_feats = np.zeros(SHAPE_DIMENSION)
@@ -83,6 +87,8 @@ def feature_extractor(img_train):
         for img in img_train:
             gray_img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
             keypoints = orb.detect(gray_img, None)
+            if keypoints == ():
+                continue
             keypoints, descriptors = orb.compute(gray_img, keypoints)
             indices = np.random.randint(descriptors.shape[0], size=SHAPE_KEYPOINTS)
             desc_samples = descriptors[indices]
@@ -101,12 +107,11 @@ def feature_extractor(img_train):
         return lambda img: extract_color_feature_histogram(kmean_color, img), lambda img: extract_shape_feature_moments(img)
 
 def feature_extractor_fusion(color_feature_extractor, shape_feature_extractor):
-    # return shape_feature_extractor
     return lambda img: np.hstack((color_feature_extractor(img) * PONDERATION, shape_feature_extractor(img) * (1 - PONDERATION)))
 
-def train(classifer, feature_histogram, label_train):
-    # TODO: Cross validation ?
-    classifer.fit(feature_histogram, label_train)
+def train(classifer, feature_histogram, labels_train_aug):
+    # TODO: Standard scaler?
+    classifer.fit(feature_histogram, labels_train_aug)
 
 def evaluate(classifier, feature_histogram, label):
     prediction = classifier.predict(feature_histogram)
@@ -117,9 +122,9 @@ if __name__ == "__main__":
     np.random.seed(RANDOM_SEED)
 
     dataset, labels = load_dataset("./dataset/train")
-    img_train, img_test, label_train, label_test = train_test_split(dataset, labels, test_size=0.2, random_state=42, stratify=labels)
+    img_train, img_test, label_train, label_test = train_test_split(dataset, labels, test_size=0.2, random_state=RANDOM_SEED, stratify=labels)
 
-    img_train_aug = dataset_augmentation(img_train)
+    img_train_aug, labels_train_aug = dataset_augmentation(img_train, label_train)
     
     print("Create feature extractor ...\n")
     color_feature_extractor, shape_feature_extractor = feature_extractor(img_train_aug)
@@ -127,12 +132,21 @@ if __name__ == "__main__":
     fused_feature_extractor = feature_extractor_fusion(color_feature_extractor, shape_feature_extractor)
 
     print("Train classifier on features ...\n")
-    # classifiers = {"dummy_classifier" : DummyClassifier(), "knn_classifier": KNeighborsClassifier(n_neighbors=1)}
-    # classifiers = {"dummy_classifier" : DummyClassifier()}
-    classifiers = {"knn_classifier": KNeighborsClassifier(n_neighbors=N_NEIGHBORS, metric='cosine'), "svm": SVM(kernel='linear'), "forest": RandomForestClassifier(max_depth=5, random_state=RANDOM_SEED)}
+
+    classifiers = {
+        "dummy_classifier": DummyClassifier(), #TODO: REMOVE ME
+        "knn_classifier": KNeighborsClassifier(n_neighbors=N_NEIGHBORS, metric='cosine'),
+        "svm_classifier_linear": SVM(kernel='linear'),
+        "svm_classifier_polynomial": SVM(kernel='poly'),
+        "svm_classifier_rbf": SVM(kernel='rbf'),
+        "random_forest_classifier": RandomForestClassifier(max_depth=N_DEPTH)
+    }
 
     for name, clf in classifiers.items():
-        train(clf, fused_feature_extractor(img_train_aug), label_train)
+        train(clf, fused_feature_extractor(img_train_aug), labels_train_aug)
         prediction, accuracy = evaluate(clf, fused_feature_extractor(img_test), label_test)
         print(f"{name} accuracy = {accuracy}\n")
-        dump_results(prediction, label_test, f"{name}-results")
+        # dump_results(prediction, label_test, f"{name}-results")
+
+    #TODO: save weights of classifier & kmeans extractor
+    #TODO: integrate early/late fusion + stacking
