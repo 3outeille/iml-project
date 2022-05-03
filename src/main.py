@@ -7,6 +7,16 @@ from scipy.spatial.distance import cdist
 from sklearn.cluster import KMeans
 from sklearn.dummy import DummyClassifier
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import StackingClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+from sklearn.svm import LinearSVC
+
 
 SHAPE_DIMENSION = 24
 SHAPE_KEYPOINTS = 200
@@ -76,6 +86,16 @@ def train(classifer, feature_histogram, label_train):
     # TODO: Cross validation ?
     classifer.fit(feature_histogram, label_train)
 
+def get_accuracy(prediction, label):
+    accuracy = np.sum(np.array(prediction) == np.array(label)) / len(prediction)
+    return accuracy
+
+def evaluate(classifier, feature_histogram, label):
+    prediction = classifier.predict(feature_histogram)
+    accuracy = get_accuracy(prediction, label)
+    return prediction, accuracy
+
+# Early fusion
 def early_fusion(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor):
     fused_feature_extractor = feature_extractor_fusion(color_feature_extractor, shape_feature_extractor)
 
@@ -88,6 +108,7 @@ def early_fusion(img_train, label_train, img_test, label_test, color_feature_ext
         print(f"accuracy = {accuracy}\n")
         dump_results(prediction, label_test, f"{name}-results")
 
+# Late fusion
 def get_max_proba_indices(color_predict_proba, shape_predict_proba):
     classes_pred_proba = 0.6 * color_predict_proba + 0.4 * shape_predict_proba
     return np.argmax(classes_pred_proba, axis=1)
@@ -116,14 +137,37 @@ def late_fusion(img_train, label_train, img_test, label_test, color_feature_extr
         print(f"accuracy = {accuracy}\n")
         dump_results(prediction, label_test, f"{name}-results")
 
-def get_accuracy(prediction, label):
-    accuracy = np.sum(np.array(prediction) == np.array(label)) / len(prediction)
-    return accuracy
+# Early fusion with stacking classifier
+def early_fusion_with_stacking_clf(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor):
+    fused_feature_extractor = feature_extractor_fusion(color_feature_extractor, shape_feature_extractor)
 
-def evaluate(classifier, feature_histogram, label):
-    prediction = classifier.predict(feature_histogram)
-    accuracy = get_accuracy(prediction, label)
-    return prediction, accuracy
+    def base_model():
+        level0 = list()
+        level0.append(('svm', SVC()))
+        level0.append(('cart', DecisionTreeClassifier()))
+        level0.append(('rf', RandomForestClassifier(n_estimators=10, random_state=42)))
+
+        model = StackingClassifier(estimators=level0, final_estimator=LogisticRegression(), cv=4)
+        return model
+
+    def model_with_pipeline():
+        level0 = list()
+        level0.append(('rf', RandomForestClassifier(n_estimators=10, random_state=42)))
+        level0.append(('svr', make_pipeline(StandardScaler(), LinearSVC(random_state=42))))
+        model = StackingClassifier(estimators=level0, final_estimator=LogisticRegression(), cv=4)
+        return model
+    
+    stacking_clf = base_model()
+    stacking_clf_with_pipeline = model_with_pipeline()
+    train(stacking_clf, fused_feature_extractor(img_train), label_train)
+    prediction, accuracy = evaluate(stacking_clf, fused_feature_extractor(img_test), label_test)
+    print(f"accuracy = {accuracy}\n")
+    dump_results(prediction, label_test, f"results")
+    
+    train(stacking_clf_with_pipeline, fused_feature_extractor(img_train), label_train)
+    prediction, accuracy = evaluate(stacking_clf_with_pipeline, fused_feature_extractor(img_test), label_test)
+    print(f"accuracy = {accuracy}\n")
+    dump_results(prediction, label_test, f"results")
 
 if __name__ == "__main__":
     np.random.seed(RANDOM_SEED)
@@ -136,9 +180,10 @@ if __name__ == "__main__":
     color_feature_extractor, shape_feature_extractor = feature_extractor(img_train)
 
     # Early fusion
-    early_fusion(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor)
+    # early_fusion(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor)
     
     # Late fusion
-    late_fusion(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor)
+    # late_fusion(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor)
     
-
+    # Early fusion with stacking_clf
+    early_fusion_with_stacking_clf(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor)
