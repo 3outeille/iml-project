@@ -24,3 +24,20 @@ def visualize_features(color_feature_extractor, img_train, img_test, n=10):
             plt.imshow(img_train[bb_idx])
             plt.axis("off"); plt.title("b%d@%.3f" % (bb_idx, dist_mat[ii, bb_idx])) # display bubble id and dist.
         plt.show()
+
+def get_labels_names(labels_association_path):
+    labels_names = {}
+
+    with open(labels_association_path, 'r') as file:
+
+        for line in file:
+
+            line = line.strip()
+            if len(line) == 0:
+                break
+
+            label = int(line[:2])
+            name = line[4:]
+            labels_names[label] = name
+
+    return labels_names
