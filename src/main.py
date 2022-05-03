@@ -11,11 +11,13 @@ from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import StackingClassifier
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 from sklearn.svm import LinearSVC
+
+from sklearn.naive_bayes import GaussianNB
 
 
 SHAPE_DIMENSION = 24
@@ -137,8 +139,8 @@ def late_fusion(img_train, label_train, img_test, label_test, color_feature_extr
         print(f"accuracy = {accuracy}\n")
         dump_results(prediction, label_test, f"{name}-results")
 
-# Early fusion with stacking classifier
-def early_fusion_with_stacking_clf(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor):
+# Fusion with stacking classifier
+def fusion_with_stacking_clf(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor):
     fused_feature_extractor = feature_extractor_fusion(color_feature_extractor, shape_feature_extractor)
 
     def base_model():
@@ -146,13 +148,16 @@ def early_fusion_with_stacking_clf(img_train, label_train, img_test, label_test,
         level0.append(('svm', SVC()))
         level0.append(('cart', DecisionTreeClassifier()))
         level0.append(('rf', RandomForestClassifier(n_estimators=10, random_state=42)))
+        level0.append(('svr', LinearSVC(random_state=42)))
 
         model = StackingClassifier(estimators=level0, final_estimator=LogisticRegression(), cv=4)
         return model
 
     def model_with_pipeline():
         level0 = list()
-        level0.append(('rf', RandomForestClassifier(n_estimators=10, random_state=42)))
+        # level0.append(('svm', SVC()))
+        level0.append(('cart', DecisionTreeClassifier()))
+        # level0.append(('rf', RandomForestClassifier(n_estimators=10, random_state=42)))
         level0.append(('svr', make_pipeline(StandardScaler(), LinearSVC(random_state=42))))
         model = StackingClassifier(estimators=level0, final_estimator=LogisticRegression(), cv=4)
         return model
@@ -161,12 +166,46 @@ def early_fusion_with_stacking_clf(img_train, label_train, img_test, label_test,
     stacking_clf_with_pipeline = model_with_pipeline()
     train(stacking_clf, fused_feature_extractor(img_train), label_train)
     prediction, accuracy = evaluate(stacking_clf, fused_feature_extractor(img_test), label_test)
-    print(f"accuracy = {accuracy}\n")
+    print(f"stacking clf accuracy = {accuracy}\n")
     dump_results(prediction, label_test, f"results")
     
     train(stacking_clf_with_pipeline, fused_feature_extractor(img_train), label_train)
     prediction, accuracy = evaluate(stacking_clf_with_pipeline, fused_feature_extractor(img_test), label_test)
-    print(f"accuracy = {accuracy}\n")
+    print(f"stacking clf with pipeline accuracy = {accuracy}\n")
+    dump_results(prediction, label_test, f"results")
+
+    # Fusion with voting classifier
+def fusion_with_voting_clf(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor):
+    fused_feature_extractor = feature_extractor_fusion(color_feature_extractor, shape_feature_extractor)
+
+    def make_model(voting_type):
+        estimators = list()
+        estimators.append(('cart', DecisionTreeClassifier()))
+        estimators.append(('rf', RandomForestClassifier(n_estimators=10, random_state=42)))
+        estimators.append(('gnb', GaussianNB()))
+        if voting_type == 'hard':
+            estimators.append(('lr', LogisticRegression(multi_class='multinomial', random_state=1)))
+            estimators.append(('svm', SVC()))
+        model = VotingClassifier(estimators=estimators, voting=voting_type)
+        return model
+
+    def model_with_pipeline(voting_type):
+        estimators = list()
+        # estimators.append(('cart', DecisionTreeClassifier()))
+        estimators.append(('rf', RandomForestClassifier(n_estimators=10, random_state=42)))
+        if voting_type == 'hard':
+            estimators.append(('svr', make_pipeline(StandardScaler(), LinearSVC(random_state=42))))
+        else:
+            estimators.append(('srf', make_pipeline(StandardScaler(), RandomForestClassifier(n_estimators=10, random_state=42))))
+        model = VotingClassifier(estimators=estimators, voting=voting_type)
+        return model
+    
+    voting_type = 'soft'
+    # voting_clf = make_model(voting_type)
+    voting_clf = model_with_pipeline(voting_type)
+    train(voting_clf, fused_feature_extractor(img_train), label_train)
+    prediction, accuracy = evaluate(voting_clf, fused_feature_extractor(img_test), label_test)
+    print(f"{voting_type} voting clf accuracy = {accuracy}\n")
     dump_results(prediction, label_test, f"results")
 
 if __name__ == "__main__":
@@ -185,5 +224,8 @@ if __name__ == "__main__":
     # Late fusion
     # late_fusion(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor)
     
-    # Early fusion with stacking_clf
-    early_fusion_with_stacking_clf(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor)
+    # Fusion with stacking_clf
+    # fusion_with_stacking_clf(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor)
+
+    # Fusion with voting_clf
+    fusion_with_voting_clf(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor)
