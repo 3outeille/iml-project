@@ -17,9 +17,9 @@ from sklearn.preprocessing import StandardScaler
 from src.utils import dump_results
 
 
-def train(classifer, feature_histogram, labels_train_aug):
+def train(classifer, feature_histogram, label_train):
     # TODO: Standard scaler?
-    classifer.fit(feature_histogram, labels_train_aug)
+    classifer.fit(feature_histogram, label_train)
 
 
 def get_accuracy(prediction, label):
@@ -34,14 +34,14 @@ def evaluate(classifier, feature_histogram, label):
     return prediction, accuracy
 
 
-def early_fusion(img_train_aug, labels_train_aug, img_test, label_test, color_feature_extractor, shape_feature_extractor, n_neighbors, n_depth, ponderation):
+def early_fusion(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor, n_neighbors, n_depth, ponderation):
     def feature_extractor_fusion(color_feature_extractor, shape_feature_extractor):
         return lambda img: np.hstack((color_feature_extractor(img) * ponderation, shape_feature_extractor(img) * (1 - ponderation)))
 
     fused_feature_extractor = feature_extractor_fusion(
         color_feature_extractor, shape_feature_extractor)
 
-    feature_train = fused_feature_extractor(img_train_aug)
+    feature_train = fused_feature_extractor(img_train)
     feature_test = fused_feature_extractor(img_test)
 
     classifiers = {
@@ -58,7 +58,7 @@ def early_fusion(img_train_aug, labels_train_aug, img_test, label_test, color_fe
     for name, clf in classifiers.items():
         print(name)
         print("\t\tTrain  ...")
-        train(clf, feature_train, labels_train_aug)
+        train(clf, feature_train, label_train)
 
         print("\t\tPrediction ...")
         prediction, accuracy = evaluate(

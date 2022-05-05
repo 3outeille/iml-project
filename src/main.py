@@ -145,12 +145,11 @@ if __name__ == "__main__":
     # TODO: Save/load weights
     np.random.seed(RANDOM_SEED)
 
+    print('Loading dataset...')
     dataset, labels = load_dataset("./dataset/train")
-    img_train, img_test, label_train, label_test = train_test_split(
-        dataset, labels, test_size=0.2, random_state=RANDOM_SEED, stratify=labels)
-
-    img_train_aug, labels_train_aug = dataset_augmentation(
-        img_train, label_train, 20)
+    print('Dataset augmentation...')
+    dataset_aug, labels_aug = dataset_augmentation(dataset, labels, 20)
+    img_train, img_test, label_train, label_test = train_test_split(dataset_aug, labels_aug, test_size=0.2, random_state=RANDOM_SEED, stratify=labels_aug)
 
     # TODO implement data scaling, solve 'ValueError: setting an array element with a sequence. The requested array has an inhomogeneous shape after 1 dimensions. The detected shape was (2508,) + inhomogeneous part.'
     # img_train_aug, img_test = scale_data(img_train_aug, img_test)
@@ -159,14 +158,14 @@ if __name__ == "__main__":
     color_feature_extractor, shape_feature_extractor = feature_extractor(
         img_train, load_session=LOAD_SESSION)
 
-    early_fusion(img_train_aug, labels_train_aug, img_test, label_test,
+    early_fusion(img_train, label_train, img_test, label_test,
                  color_feature_extractor, shape_feature_extractor, n_neighbors=N_NEIGHBORS, n_depth=N_DEPTH, ponderation=PONDERATION)
 
-    # late_fusion(img_train_aug, labels_train_aug, img_test, label_test,
+    # late_fusion(img_train, label_train, img_test, label_test,
     #             color_feature_extractor, shape_feature_extractor, n_neighbors=N_NEIGHBORS)
 
-    # fusion_with_stacking_clf(img_train_aug, labels_train_aug, img_test, label_test, color_feature_extractor,
+    # fusion_with_stacking_clf(img_train, label_train, img_test, label_test, color_feature_extractor,
     #                          shape_feature_extractor, random_seed=RANDOM_SEED, n_estimators=N_ESTIMATORS, cv=CROSS_VALIDATION, ponderation=PONDERATION)
 
-    # fusion_with_voting_clf(img_train_aug, labels_train_aug, img_test, label_test, color_feature_extractor,
+    # fusion_with_voting_clf(img_train, label_train, img_test, label_test, color_feature_extractor,
     #                        shape_feature_extractor, random_seed=RANDOM_SEED, n_estimators=N_ESTIMATORS, ponderation=PONDERATION)
