@@ -15,20 +15,22 @@ from argparse import ArgumentParser
 import os
 import os.path
 from typing import Dict, List
+from src.main import feature_extractor
 
 # You may use the following imports. Please warn me if you need something else.
-# import numpy as np
+import numpy as np
 # import sklearn
-# import cv2
+import cv2
 # import skimage
+import pickle
+
 
 class MyClassifier:
     """Sample classifier class to update.
     """
 
-    def __init__(self, clf) -> None:
-        
-        self.clf 
+    def __init__(self) -> None:
+        self.clf = pickle.load(open("assets/clf.pkl", "rb"))
 
     def classify_image(self, image_path: str) -> int:
         """Classify the file for which the path is given,
@@ -43,11 +45,22 @@ class MyClassifier:
         WARNING: `0` is not a valid class here.
                  You may need to adjust your classifier outputs (typically 0-55).
         """
-        cls_id = ((int(image_path[-6:-4]) * 991) % 56) + 1
-        return cls_id
+        ponderation = 1
+        img = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
+
+        color_feature_extractor, shape_feature_extractor = feature_extractor(
+            [img], load_session=True)
+
+        def fused_feature_extractor(x): return np.hstack((color_feature_extractor(
+            x) * ponderation, shape_feature_extractor(x) * (1 - ponderation)))
+
+        return self.clf.predict(fused_feature_extractor([img]))[0]
+
+        # cls_id = ((int(image_path[-6:-4]) * 991) % 56) + 1
+        # return cls_id
 
 
-def save_classifications(image_classes: Dict[str,int], output_path: str):
+def save_classifications(image_classes: Dict[str, int], output_path: str):
     """Save classification results to a CSV file
 
     Args:
@@ -74,7 +87,8 @@ def find_png_files_in_dir(input_dir_path: str) -> List[str]:
         List[str]: List of PNG files (no leading directory).
     """
     with os.scandir(input_dir_path) as entry_iter:
-        result = [entry.name for entry in entry_iter if entry.name.endswith('.png') and entry.is_file()]
+        result = [entry.name for entry in entry_iter if entry.name.endswith(
+            '.png') and entry.is_file()]
         return result
 
 
