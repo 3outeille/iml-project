@@ -5,6 +5,14 @@ from sklearn.utils import shuffle
 import numpy as np
 import copy
 
+
+# def scale_data(img_train, img_test):
+#     scaler = StandardScaler()
+#     scaled_train = scaler.fit_transform(img_train)
+#     scaled_test = scaler.transform(img_test)
+#     return scaled_train, scaled_test
+
+
 def load_dataset(path):
     train, labels = [], []
 
@@ -104,7 +112,6 @@ def create_mask(img):
 
 def create_super_sample(train, masks):
     samples = []
-
     for (i, img) in enumerate(train):
         img_masked = img[masks[i]]
         indices = np.random.choice(img_masked.shape[0], 50, replace=False)
