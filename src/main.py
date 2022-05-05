@@ -11,13 +11,13 @@ import pickle
 SHAPE_DIMENSION = 48
 SHAPE_KEYPOINTS = 96
 COLOR_DIMENSION = 24
-PONDERATION = 0
-RANDOM_SEED = 42
+PONDERATION = 0.4
+RANDOM_SEED = 40
 N_NEIGHBORS = 3
 N_DEPTH = 8
 N_ESTIMATORS = 10
 CROSS_VALIDATION = 40
-MODE = 'orb'
+MODE = 'moments'
 LOAD_SESSION = False
 
 
@@ -33,14 +33,27 @@ def extract_color_feature_histogram(extractor, imgs):
 def extract_shape_feature_moments(imgs):
     res = []
 
-    for img in imgs:
+    for i, img in enumerate(imgs):
         img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+
+        height, width = img.shape
+        if height > width:
+            img = cv2.copyMakeBorder(
+                img, 0, 0, (height - width) // 2, (height - width) // 2, cv2.BORDER_CONSTANT, value=255)
+        elif width > height:
+            img = cv2.copyMakeBorder(
+                img, (width - height) // 2, (width - height) // 2, 0, 0,  cv2.BORDER_CONSTANT, value=255)
+        img = cv2.resize(img, (100, 100))
+
         img = cv2.copyMakeBorder(
-            img, 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=255)
+            img, 8, 8, 8, 8, cv2.BORDER_CONSTANT, value=255)
+
         img = cv2.GaussianBlur(img, (5, 5), 0)
         _, img = cv2.threshold(
             img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         img = cv2.Canny(img, 100, 200)
+
+        # plt.imsave(f'test/{i}.png', img)
 
         moments = cv2.moments(img)
 
@@ -137,14 +150,14 @@ if __name__ == "__main__":
         dataset, labels, test_size=0.2, random_state=RANDOM_SEED, stratify=labels)
 
     img_train_aug, labels_train_aug = dataset_augmentation(
-        img_train, label_train)
+        img_train, label_train, 20)
 
     # TODO implement data scaling, solve 'ValueError: setting an array element with a sequence. The requested array has an inhomogeneous shape after 1 dimensions. The detected shape was (2508,) + inhomogeneous part.'
     # img_train_aug, img_test = scale_data(img_train_aug, img_test)
 
     print("Create feature extractor ...\n")
     color_feature_extractor, shape_feature_extractor = feature_extractor(
-        img_train_aug, load_session=LOAD_SESSION)
+        img_train, load_session=LOAD_SESSION)
 
     early_fusion(img_train_aug, labels_train_aug, img_test, label_test,
                  color_feature_extractor, shape_feature_extractor, n_neighbors=N_NEIGHBORS, n_depth=N_DEPTH, ponderation=PONDERATION)

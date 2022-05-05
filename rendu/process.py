@@ -14,6 +14,7 @@ Sample processing tool:
 from argparse import ArgumentParser
 import os
 import os.path
+import pdb
 from typing import Dict, List
 from src.main import feature_extractor
 
@@ -45,15 +46,15 @@ class MyClassifier:
         WARNING: `0` is not a valid class here.
                  You may need to adjust your classifier outputs (typically 0-55).
         """
-        ponderation = 1
+        ponderation = 0.5
         img = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
 
         color_feature_extractor, shape_feature_extractor = feature_extractor(
             [img], load_session=True)
 
-        def fused_feature_extractor(x): return np.hstack((color_feature_extractor(
-            x) * ponderation, shape_feature_extractor(x) * (1 - ponderation)))
-
+        def fused_feature_extractor(x):
+            return np.hstack((color_feature_extractor(x) * ponderation, shape_feature_extractor(x) * (1 - ponderation)))
+            
         return self.clf.predict(fused_feature_extractor([img]))[0]
 
         # cls_id = ((int(image_path[-6:-4]) * 991) % 56) + 1
@@ -127,6 +128,7 @@ def main():
     # Save predictions
     save_classifications(results, args.output)
     print(f"Predictions saved in '{args.output}'.")
+
 
 if __name__ == "__main__":
     main()
