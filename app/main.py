@@ -14,7 +14,7 @@ PONDERATION = 0.4
 RANDOM_SEED = 40
 N_NEIGHBORS = 3
 N_DEPTH = 8
-TRANSFORMATION_PER_IMG = 5
+TRANSFORMATION_PER_IMG = 20
 N_ESTIMATORS = 10
 CROSS_VALIDATION = 40
 MODE = 'moments'
@@ -165,11 +165,11 @@ if __name__ == "__main__":
 
     # TODO: common classifiers for everyone
 
-    # early_fusion(img_train, label_train, img_test, label_test,
-    #              color_feature_extractor, shape_feature_extractor, n_neighbors=N_NEIGHBORS, n_depth=N_DEPTH, ponderation=PONDERATION)
+    early_fusion(img_train, label_train, img_test, label_test,
+                 color_feature_extractor, shape_feature_extractor, n_neighbors=N_NEIGHBORS, n_depth=N_DEPTH, ponderation=PONDERATION)
 
-    late_fusion(img_train, label_train, img_test, label_test,
-                color_feature_extractor, shape_feature_extractor, n_neighbors=N_NEIGHBORS)
+    # late_fusion(img_train, label_train, img_test, label_test,
+    #             color_feature_extractor, shape_feature_extractor, n_neighbors=N_NEIGHBORS)
 
     # stacking_early_fusion(img_train, label_train, img_test, label_test, color_feature_extractor,
     #                          shape_feature_extractor, random_seed=RANDOM_SEED, n_estimators=N_ESTIMATORS, cv=CROSS_VALIDATION, ponderation=PONDERATION)
