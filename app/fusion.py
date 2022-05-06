@@ -79,6 +79,10 @@ def early_fusion(img_train, label_train, img_test, label_test, color_feature_ext
 
 
 def late_fusion(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor, n_neighbors):
+    cwd = os.getcwd()
+    # During developpement
+    if cwd != "/app":
+        cwd += "/app"
 
     def soft_voting(color_predict_proba, shape_predict_proba, color_labels, shape_labels):
         def get_max_proba_indices(color_predict_proba, shape_predict_proba):
@@ -99,6 +103,8 @@ def late_fusion(img_train, label_train, img_test, label_test, color_feature_extr
     color_feature_test = color_feature_extractor(img_test)
     shape_feature_test = shape_feature_extractor(img_test)
 
+    best_accuracy = 0
+
     for name, clf in classifiers.items():
         print(f"Train {name} classifier on color features ...\n")
         train(clf[0], color_feature_train, label_train)
@@ -111,11 +117,22 @@ def late_fusion(img_train, label_train, img_test, label_test, color_feature_extr
             img_test)), clf[1].predict_proba(shape_feature_test), color_labels, shape_labels)
 
         accuracy = get_accuracy(prediction, label_test)
-        print(f"accuracy = {accuracy}\n")
+
+        if accuracy > best_accuracy:
+            print(f"Save current best accuracy ({name} classifier) ...")
+            best_accuracy = accuracy
+            # dump_results(prediction, label_test, f"app/{name}-result.csv")
+            pickle.dump(clf, open(f"{cwd}/clf.pkl", "wb"))
+
         # dump_results(prediction, label_test, f"{name}-results")
 
 
-def fusion_with_stacking_clf(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor, random_seed, n_estimators, cv, ponderation):
+def stacking_early_fusion(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor, random_seed, n_estimators, cv, ponderation):
+    cwd = os.getcwd()
+    # During developpement
+    if cwd != "/app":
+        cwd += "/app"
+
     def feature_extractor_fusion(color_feature_extractor, shape_feature_extractor):
         return lambda img: np.hstack((color_feature_extractor(img) * ponderation, shape_feature_extractor(img) * (1 - ponderation)))
 
@@ -161,48 +178,6 @@ def fusion_with_stacking_clf(img_train, label_train, img_test, label_test, color
     prediction, accuracy = evaluate(
         stacking_clf_with_pipeline, feature_test, label_test)
     print(f"stacking clf with pipeline accuracy = {accuracy}\n")
-    # dump_results(prediction, label_test, f"results")
+    pickle.dump(stacking_clf_with_pipeline, open(f"{cwd}/clf.pkl", "wb"))
 
-
-def fusion_with_voting_clf(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor, random_seed, n_estimators, ponderation):
-    def feature_extractor_fusion(color_feature_extractor, shape_feature_extractor):
-        return lambda img: np.hstack((color_feature_extractor(img) * ponderation, shape_feature_extractor(img) * (1 - ponderation)))
-
-    fused_feature_extractor = feature_extractor_fusion(
-        color_feature_extractor, shape_feature_extractor)
-
-    def make_model(voting_type):
-        estimators = list()
-        estimators.append(('cart', DecisionTreeClassifier()))
-        estimators.append(('rf', RandomForestClassifier(
-            n_estimators=n_estimators, random_state=random_seed)))
-        estimators.append(('gnb', GaussianNB()))
-        if voting_type == 'hard':
-            estimators.append(('lr', LogisticRegression(
-                multi_class='multinomial', random_state=random_seed)))
-            estimators.append(('svm', SVM()))
-        model = VotingClassifier(estimators=estimators, voting=voting_type)
-        return model
-
-    def model_with_pipeline(voting_type):
-        estimators = list()
-        # estimators.append(('cart', DecisionTreeClassifier()))
-        estimators.append(('rf', RandomForestClassifier(
-            n_estimators=n_estimators, random_state=random_seed)))
-        if voting_type == 'hard':
-            estimators.append(('svr', make_pipeline(
-                StandardScaler(), LinearSVC(random_state=random_seed))))
-        else:
-            estimators.append(('srf', make_pipeline(StandardScaler(), RandomForestClassifier(
-                n_estimators=n_estimators, random_state=random_seed))))
-        model = VotingClassifier(estimators=estimators, voting=voting_type)
-        return model
-
-    voting_type = 'soft'
-    voting_clf = make_model(voting_type)
-    # voting_clf = model_with_pipeline(voting_type)
-    train(voting_clf, fused_feature_extractor(img_train), label_train)
-    prediction, accuracy = evaluate(
-        voting_clf, fused_feature_extractor(img_test), label_test)
-    print(f"{voting_type} voting clf accuracy = {accuracy}\n")
     # dump_results(prediction, label_test, f"results")

@@ -14,7 +14,7 @@ PONDERATION = 0.4
 RANDOM_SEED = 40
 N_NEIGHBORS = 3
 N_DEPTH = 8
-TRANSFORMATION_PER_IMG = 20
+TRANSFORMATION_PER_IMG = 5
 N_ESTIMATORS = 10
 CROSS_VALIDATION = 40
 MODE = 'moments'
@@ -43,6 +43,7 @@ def extract_shape_feature_moments(imgs):
         elif width > height:
             img = cv2.copyMakeBorder(
                 img, (width - height) // 2, (width - height) // 2, 0, 0,  cv2.BORDER_CONSTANT, value=255)
+        
         img = cv2.resize(img, (100, 100))
 
         img = cv2.copyMakeBorder(
@@ -105,7 +106,6 @@ def feature_extractor(img_train, load_session=False):
             kmean_color.fit(super_sample)
             pickle.dump(kmean_color, open(f"{cwd}/kmean_color.pkl", "wb"))
         else:
-            print(cwd)
             kmean_color = pickle.load(open(f"{cwd}/kmean_color.pkl", "rb"))
 
         return kmean_color
@@ -134,7 +134,6 @@ def feature_extractor(img_train, load_session=False):
             kmean_shape.fit(super_sample)
             pickle.dump(kmean_shape, open(f"{cwd}/kmean_shape.pkl", "wb"))
         else:
-            print(cwd)
             kmean_shape = pickle.load(open(f"{cwd}/kmean_shape.pkl", "rb"))
 
         return kmean_shape
@@ -154,21 +153,23 @@ if __name__ == "__main__":
     print('Loading dataset...')
     dataset, labels = load_dataset("./dataset/train")
     print('Dataset augmentation...')
-    dataset_aug, labels_aug = dataset_augmentation(dataset, labels, TRANSFORMATION_PER_IMG)
-    img_train, img_test, label_train, label_test = train_test_split(dataset_aug, labels_aug, test_size=0.2, random_state=RANDOM_SEED, stratify=labels_aug)
+    dataset_aug, labels_aug = dataset_augmentation(
+        dataset, labels, TRANSFORMATION_PER_IMG)
+
+    img_train, img_test, label_train, label_test = train_test_split(
+        dataset_aug, labels_aug, test_size=0.2, random_state=RANDOM_SEED, stratify=labels_aug)
 
     print("Create feature extractor ...\n")
     color_feature_extractor, shape_feature_extractor = feature_extractor(
         img_train, load_session=LOAD_SESSION)
 
-    early_fusion(img_train, label_train, img_test, label_test,
-                 color_feature_extractor, shape_feature_extractor, n_neighbors=N_NEIGHBORS, n_depth=N_DEPTH, ponderation=PONDERATION)
+    # TODO: common classifiers for everyone
 
-    # late_fusion(img_train, label_train, img_test, label_test,
-    #             color_feature_extractor, shape_feature_extractor, n_neighbors=N_NEIGHBORS)
+    # early_fusion(img_train, label_train, img_test, label_test,
+    #              color_feature_extractor, shape_feature_extractor, n_neighbors=N_NEIGHBORS, n_depth=N_DEPTH, ponderation=PONDERATION)
 
-    # fusion_with_stacking_clf(img_train, label_train, img_test, label_test, color_feature_extractor,
+    late_fusion(img_train, label_train, img_test, label_test,
+                color_feature_extractor, shape_feature_extractor, n_neighbors=N_NEIGHBORS)
+
+    # stacking_early_fusion(img_train, label_train, img_test, label_test, color_feature_extractor,
     #                          shape_feature_extractor, random_seed=RANDOM_SEED, n_estimators=N_ESTIMATORS, cv=CROSS_VALIDATION, ponderation=PONDERATION)
-
-    # fusion_with_voting_clf(img_train, label_train, img_test, label_test, color_feature_extractor,
-    #                        shape_feature_extractor, random_seed=RANDOM_SEED, n_estimators=N_ESTIMATORS, ponderation=PONDERATION)
