@@ -1,5 +1,4 @@
--e
-pdb
+-e .
 opencv-contrib-python-headless==4.5.5.64
 numpy==1.22.0
 scikit-learn==1.0.2
