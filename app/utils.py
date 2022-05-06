@@ -1,17 +1,8 @@
 import cv2
 import os
-from matplotlib.style import available
 from sklearn.utils import shuffle
 import numpy as np
 import copy
-
-
-# def scale_data(img_train, img_test):
-#     scaler = StandardScaler()
-#     scaled_train = scaler.fit_transform(img_train)
-#     scaled_test = scaler.transform(img_test)
-#     return scaled_train, scaled_test
-
 
 def load_dataset(path):
     train, labels = [], []

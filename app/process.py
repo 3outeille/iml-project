@@ -12,10 +12,11 @@ Sample processing tool:
 """
 
 from argparse import ArgumentParser
+from ast import arg
 import os
 import os.path
 from typing import Dict, List
-from src.main import feature_extractor
+from main import feature_extractor, PONDERATION
 
 # You may use the following imports. Please warn me if you need something else.
 import numpy as np
@@ -30,7 +31,12 @@ class MyClassifier:
     """
 
     def __init__(self) -> None:
-        self.clf = pickle.load(open("assets/clf.pkl", "rb"))
+        cwd = os.getcwd()
+        # During developpement
+        if cwd != "/app":
+            cwd += "/app"
+
+        self.clf = pickle.load(open(f"{cwd}/clf.pkl", "rb"))
 
     def classify_image(self, image_path: str) -> int:
         """Classify the file for which the path is given,
@@ -50,11 +56,11 @@ class MyClassifier:
         color_feature_extractor, shape_feature_extractor = feature_extractor(
             [img], load_session=True)
 
-        ponderation = 0.4
         def fused_feature_extractor(x):
-            return np.hstack((color_feature_extractor(x) * ponderation, shape_feature_extractor(x) * (1 - ponderation)))
+            return np.hstack((color_feature_extractor(x) * PONDERATION, shape_feature_extractor(x) * (1 - PONDERATION)))
 
         return self.clf.predict(fused_feature_extractor([img]))[0]
+
 
 def save_classifications(image_classes: Dict[str, int], output_path: str):
     """Save classification results to a CSV file
@@ -107,6 +113,7 @@ def main():
     # Let's go
     results = {}
     print("Processing files...")
+
     for file in files:
         print(file)
         file_full_path = os.path.join(args.test_dir, file)

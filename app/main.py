@@ -1,6 +1,5 @@
-import pickle
-from src.utils import *
-from src.fusion import *
+from utils import *
+from fusion import *
 
 import cv2
 import numpy as np
@@ -15,6 +14,7 @@ PONDERATION = 0.4
 RANDOM_SEED = 40
 N_NEIGHBORS = 3
 N_DEPTH = 8
+TRANSFORMATION_PER_IMG = 20
 N_ESTIMATORS = 10
 CROSS_VALIDATION = 40
 MODE = 'moments'
@@ -91,6 +91,11 @@ def extract_shape_feature_histogram(extractor, imgs):
 
 def feature_extractor(img_train, load_session=False):
 
+    cwd = os.getcwd()
+    # During developpement
+    if cwd != "/app":
+        cwd += "/app"
+
     def color_extractor():
         if load_session == False:
             masks = [create_mask(img) for img in img_train]
@@ -98,9 +103,10 @@ def feature_extractor(img_train, load_session=False):
             kmean_color = KMeans(n_clusters=COLOR_DIMENSION,
                                  random_state=RANDOM_SEED)
             kmean_color.fit(super_sample)
-            pickle.dump(kmean_color, open("assets/kmean_color.pkl", "wb"))
+            pickle.dump(kmean_color, open(f"{cwd}/kmean_color.pkl", "wb"))
         else:
-            kmean_color = pickle.load(open("assets/kmean_color.pkl", "rb"))
+            print(cwd)
+            kmean_color = pickle.load(open(f"{cwd}/kmean_color.pkl", "rb"))
 
         return kmean_color
 
@@ -126,9 +132,10 @@ def feature_extractor(img_train, load_session=False):
             kmean_shape = KMeans(n_clusters=SHAPE_DIMENSION,
                                  random_state=RANDOM_SEED)
             kmean_shape.fit(super_sample)
-            pickle.dump(kmean_shape, open("assets/kmean_shape.pkl", "wb"))
+            pickle.dump(kmean_shape, open(f"{cwd}/kmean_shape.pkl", "wb"))
         else:
-            kmean_shape = pickle.load(open("assets/kmean_shape.pkl", "rb"))
+            print(cwd)
+            kmean_shape = pickle.load(open(f"{cwd}/kmean_shape.pkl", "rb"))
 
         return kmean_shape
 
@@ -142,17 +149,13 @@ def feature_extractor(img_train, load_session=False):
 
 
 if __name__ == "__main__":
-    # TODO: Save/load weights
     np.random.seed(RANDOM_SEED)
 
     print('Loading dataset...')
     dataset, labels = load_dataset("./dataset/train")
     print('Dataset augmentation...')
-    dataset_aug, labels_aug = dataset_augmentation(dataset, labels, 20)
+    dataset_aug, labels_aug = dataset_augmentation(dataset, labels, TRANSFORMATION_PER_IMG)
     img_train, img_test, label_train, label_test = train_test_split(dataset_aug, labels_aug, test_size=0.2, random_state=RANDOM_SEED, stratify=labels_aug)
-
-    # TODO implement data scaling, solve 'ValueError: setting an array element with a sequence. The requested array has an inhomogeneous shape after 1 dimensions. The detected shape was (2508,) + inhomogeneous part.'
-    # img_train_aug, img_test = scale_data(img_train_aug, img_test)
 
     print("Create feature extractor ...\n")
     color_feature_extractor, shape_feature_extractor = feature_extractor(

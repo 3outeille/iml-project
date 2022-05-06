@@ -1,9 +1,9 @@
-import numpy as np
 import pickle
+import os
+import numpy as np
 from sklearn.dummy import DummyClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC as SVM
-import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.svm import LinearSVC
@@ -14,7 +14,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-from src.utils import dump_results
+from utils import dump_results
 
 
 def train(classifer, feature_histogram, label_train):
@@ -35,6 +35,11 @@ def evaluate(classifier, feature_histogram, label):
 
 
 def early_fusion(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor, n_neighbors, n_depth, ponderation):
+    cwd = os.getcwd()
+    # During developpement
+    if cwd != "/app":
+        cwd += "/app"
+
     def feature_extractor_fusion(color_feature_extractor, shape_feature_extractor):
         return lambda img: np.hstack((color_feature_extractor(img) * ponderation, shape_feature_extractor(img) * (1 - ponderation)))
 
@@ -69,8 +74,8 @@ def early_fusion(img_train, label_train, img_test, label_test, color_feature_ext
         if accuracy > best_accuracy:
             print(f"Save current best accuracy ({name} classifier) ...")
             best_accuracy = accuracy
-            dump_results(prediction, label_test, f"assets/{name}-result.csv")
-            pickle.dump(clf, open("assets/clf.pkl", "wb"))
+            # dump_results(prediction, label_test, f"app/{name}-result.csv")
+            pickle.dump(clf, open(f"{cwd}/clf.pkl", "wb"))
 
 
 def late_fusion(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor, n_neighbors):
