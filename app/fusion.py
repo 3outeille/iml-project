@@ -126,8 +126,6 @@ def late_fusion(img_train, label_train, img_test, label_test, color_feature_extr
 
         # dump_results(prediction, label_test, f"{name}-results")
 
-import time
-
 def stacking_early_fusion(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor, random_seed, n_estimators, cv, ponderation):
     cwd = os.getcwd()
     # During developpement
@@ -142,11 +140,9 @@ def stacking_early_fusion(img_train, label_train, img_test, label_test, color_fe
 
     def base_model():
         level0 = list()
-        # level0.append(('svm', SVM())) # FIXME: Not converging, Remove it ?
         level0.append(('cart', DecisionTreeClassifier()))
         level0.append(('rf', RandomForestClassifier(
             n_estimators=n_estimators, random_state=random_seed)))
-        # level0.append(('svr', LinearSVC(random_state=random_seed))) # FIXME: Not converging, Remove it ?
 
         model = StackingClassifier(
             estimators=level0, final_estimator=LogisticRegression(), cv=cv)
@@ -166,17 +162,9 @@ def stacking_early_fusion(img_train, label_train, img_test, label_test, color_fe
     train(stacking_clf, feature_train, label_train)
     prediction, accuracy = evaluate(
         stacking_clf, feature_test, label_test)
-    print(f"stacking clf accuracy = {accuracy}\n")
+    print(f"stacking early clf accuracy = {accuracy}\n")
 
-    stacking_clf_with_pipe = model_with_pipeline()
-    train(stacking_clf_with_pipe, feature_train, label_train)
-    prediction, accuracy = evaluate(
-        stacking_clf_with_pipe, feature_test, label_test)
-    print(f"stacking clf with pipe accuracy = {accuracy}\n")
-
-    pickle.dump(stacking_clf_with_pipe, open(f"{cwd}/clf.pkl", "wb"))
-
-    # dump_results(prediction, label_test, f"results")
+    pickle.dump(stacking_clf, open(f"{cwd}/clf.pkl", "wb"))
 
 def stacking_late_fusion(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor, random_seed, n_estimators, cv, ponderation):
     cwd = os.getcwd()
@@ -186,11 +174,9 @@ def stacking_late_fusion(img_train, label_train, img_test, label_test, color_fea
 
     def base_model():
         level0 = list()
-        # level0.append(('svm', SVM())) # FIXME: Not converging, Remove it ?
         level0.append(('cart', DecisionTreeClassifier()))
         level0.append(('rf', RandomForestClassifier(
             n_estimators=n_estimators, random_state=random_seed)))
-        # level0.append(('svr', LinearSVC(random_state=random_seed))) # FIXME: Not converging, Remove it ?
 
         model = StackingClassifier(
             estimators=level0, final_estimator=LogisticRegression(), cv=cv)
@@ -224,6 +210,6 @@ def stacking_late_fusion(img_train, label_train, img_test, label_test, color_fea
         img_test)), shape_stacking_clf.predict_proba(shape_feature_test), color_labels, shape_labels)
     accuracy = get_accuracy(prediction, label_test)
 
-    print(f"stacking clf accuracy = {accuracy}\n")
+    print(f"stacking late clf accuracy = {accuracy}\n")
 
     pickle.dump(stacking_late_fusion, open(f"{cwd}/clf.pkl", "wb"))
