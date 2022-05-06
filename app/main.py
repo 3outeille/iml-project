@@ -14,9 +14,9 @@ PONDERATION = 0.4
 RANDOM_SEED = 40
 N_NEIGHBORS = 3
 N_DEPTH = 8
-TRANSFORMATION_PER_IMG = 20
+TRANSFORMATION_PER_IMG = 0
 N_ESTIMATORS = 10
-CROSS_VALIDATION = 40
+CROSS_VALIDATION = 4
 MODE = 'moments'
 LOAD_SESSION = False
 
@@ -146,6 +146,7 @@ def feature_extractor(img_train, load_session=False):
     else:
         return lambda img: extract_color_feature_histogram(kmean_color, img), lambda img: extract_shape_feature_moments(img)
 
+import time
 
 if __name__ == "__main__":
     np.random.seed(RANDOM_SEED)
@@ -165,11 +166,26 @@ if __name__ == "__main__":
 
     # TODO: common classifiers for everyone
 
+    start = time.time()
     early_fusion(img_train, label_train, img_test, label_test,
                  color_feature_extractor, shape_feature_extractor, n_neighbors=N_NEIGHBORS, n_depth=N_DEPTH, ponderation=PONDERATION)
+    end = time.time()
+    print(f"early fusion takes: {end - start}")
 
-    # late_fusion(img_train, label_train, img_test, label_test,
-    #             color_feature_extractor, shape_feature_extractor, n_neighbors=N_NEIGHBORS)
+    start = time.time()
+    late_fusion(img_train, label_train, img_test, label_test,
+                color_feature_extractor, shape_feature_extractor, n_neighbors=N_NEIGHBORS)
+    end = time.time()
+    print(f"late fusion takes: {end - start}")
 
-    # stacking_early_fusion(img_train, label_train, img_test, label_test, color_feature_extractor,
-    #                          shape_feature_extractor, random_seed=RANDOM_SEED, n_estimators=N_ESTIMATORS, cv=CROSS_VALIDATION, ponderation=PONDERATION)
+    start = time.time()
+    stacking_early_fusion(img_train, label_train, img_test, label_test, color_feature_extractor,
+                             shape_feature_extractor, random_seed=RANDOM_SEED, n_estimators=N_ESTIMATORS, cv=CROSS_VALIDATION, ponderation=PONDERATION)
+    end = time.time()
+    print(f"stacking early fusion takes: {end - start}")
+
+    start = time.time()
+    stacking_late_fusion(img_train, label_train, img_test, label_test, color_feature_extractor,
+                             shape_feature_extractor, random_seed=RANDOM_SEED, n_estimators=N_ESTIMATORS, cv=CROSS_VALIDATION, ponderation=PONDERATION)
+    end = time.time()
+    print(f"stacking late fusion takes: {end - start}")
