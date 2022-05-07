@@ -146,6 +146,8 @@ def feature_extractor(img_train, load_session=False):
     else:
         return lambda img: extract_color_feature_histogram(kmean_color, img), lambda img: extract_shape_feature_moments(img)
 
+
+import time
 if __name__ == "__main__":
     np.random.seed(RANDOM_SEED)
 
@@ -162,13 +164,11 @@ if __name__ == "__main__":
     color_feature_extractor, shape_feature_extractor = feature_extractor(
         img_train, load_session=LOAD_SESSION)
 
-    # TODO: common classifiers for everyone
-
     early_fusion(img_train, label_train, img_test, label_test,
                  color_feature_extractor, shape_feature_extractor, n_neighbors=N_NEIGHBORS, n_depth=N_DEPTH, ponderation=PONDERATION)
 
     late_fusion(img_train, label_train, img_test, label_test,
-                color_feature_extractor, shape_feature_extractor, n_neighbors=N_NEIGHBORS)
+                color_feature_extractor, shape_feature_extractor, n_neighbors=N_NEIGHBORS, n_depth=N_DEPTH)
 
     stacking_early_fusion(img_train, label_train, img_test, label_test, color_feature_extractor,
                              shape_feature_extractor, random_seed=RANDOM_SEED, n_estimators=N_ESTIMATORS, cv=CROSS_VALIDATION, ponderation=PONDERATION)
