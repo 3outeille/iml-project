@@ -90,7 +90,7 @@ def extract_shape_feature_histogram(extractor, imgs):
     return vec / SHAPE_KEYPOINTS
 
 
-def feature_extractor(img_train, load_session=False):
+def feature_extractor(img_train, load_session=False, mode="moments"):
 
     cwd = os.getcwd()
     # During developpement
@@ -140,10 +140,12 @@ def feature_extractor(img_train, load_session=False):
 
     kmean_color = color_extractor()
 
-    if (MODE == 'orb'):
+    if (mode == 'orb'):
+        print("Mode ORB ...")
         kmean_shape = shape_extractor()
         return lambda img: extract_color_feature_histogram(kmean_color, img), lambda img: extract_shape_feature_histogram(kmean_shape, img)
     else:
+        print("Mode Hu moments ...")
         return lambda img: extract_color_feature_histogram(kmean_color, img), lambda img: extract_shape_feature_moments(img)
 
 
@@ -162,7 +164,7 @@ if __name__ == "__main__":
 
     print("Create feature extractor ...\n")
     color_feature_extractor, shape_feature_extractor = feature_extractor(
-        img_train, load_session=LOAD_SESSION)
+        img_train, load_session=LOAD_SESSION, mode=MODE)
 
     early_fusion(img_train, label_train, img_test, label_test,
                  color_feature_extractor, shape_feature_extractor, n_neighbors=N_NEIGHBORS, n_depth=N_DEPTH, ponderation=PONDERATION)

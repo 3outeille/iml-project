@@ -121,8 +121,7 @@ def late_fusion(img_train, label_train, img_test, label_test, color_feature_extr
 
         color_labels = clf[0].predict(color_feature_test)
         shape_labels = clf[1].predict(shape_feature_test)
-        prediction = soft_voting(clf[0].predict_proba(color_feature_extractor(
-            img_test)), clf[1].predict_proba(shape_feature_test), color_labels, shape_labels)
+        prediction = soft_voting(clf[0].predict_proba(color_feature_test), clf[1].predict_proba(shape_feature_test), color_labels, shape_labels)
 
         accuracy = get_accuracy(prediction, label_test)
         print(f"late fusion {name} accuracy = {accuracy}\n")
