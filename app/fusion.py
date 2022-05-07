@@ -50,12 +50,12 @@ def early_fusion(img_train, label_train, img_test, label_test, color_feature_ext
     feature_test = fused_feature_extractor(img_test)
 
     classifiers = {
-        "dummy_classifier": DummyClassifier(),  # TODO: REMOVE ME
         "knn_classifier": KNeighborsClassifier(n_neighbors=n_neighbors, metric='cosine'),
         "svm_classifier_linear": SVM(kernel='linear'),
         "svm_classifier_polynomial": SVM(kernel='poly'),
         "svm_classifier_rbf": SVM(kernel='rbf'),
-        "random_forest_classifier": RandomForestClassifier(max_depth=n_depth)
+        "random_forest_classifier": RandomForestClassifier(max_depth=n_depth),
+        "cart": DecisionTreeClassifier()
     }
 
     best_accuracy = 0
@@ -78,7 +78,7 @@ def early_fusion(img_train, label_train, img_test, label_test, color_feature_ext
             pickle.dump(clf, open(f"{cwd}/clf.pkl", "wb"))
 
 
-def late_fusion(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor, n_neighbors):
+def late_fusion(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor, n_neighbors, n_depth):
     cwd = os.getcwd()
     # During developpement
     if cwd != "/app":
@@ -91,11 +91,19 @@ def late_fusion(img_train, label_train, img_test, label_test, color_feature_extr
 
         max_proba_indces = get_max_proba_indices(
             color_predict_proba, shape_predict_proba)
-        # TODO stop cheating
         return max_proba_indces + 1
 
-    classifiers = {"knn_clf-knn_clf": [KNeighborsClassifier(n_neighbors=n_neighbors), KNeighborsClassifier(n_neighbors=n_neighbors)],
-                   "dummy_clf-dummy_clf": [DummyClassifier(), DummyClassifier()]}
+    classifiers = {
+        "knn-knn": [KNeighborsClassifier(n_neighbors=n_neighbors, metric='cosine'), KNeighborsClassifier(n_neighbors=n_neighbors, metric='cosine')],
+        "knn-rand": [KNeighborsClassifier(n_neighbors=n_neighbors, metric='cosine'), RandomForestClassifier(max_depth=n_depth)],
+        "knn-cart": [KNeighborsClassifier(n_neighbors=n_neighbors, metric='cosine'), DecisionTreeClassifier()],
+        "random_forest-random_forest": [RandomForestClassifier(max_depth=n_depth), RandomForestClassifier(max_depth=n_depth)],
+        "random_forest-knn": [RandomForestClassifier(max_depth=n_depth), KNeighborsClassifier(n_neighbors=n_neighbors, metric='cosine')],
+        "random_forest-cart": [RandomForestClassifier(max_depth=n_depth), DecisionTreeClassifier()],
+        "cart-cart": [DecisionTreeClassifier(), DecisionTreeClassifier()],
+        "cart-knn": [DecisionTreeClassifier(), KNeighborsClassifier(n_neighbors=n_neighbors, metric='cosine')],
+        "cart-rand": [DecisionTreeClassifier(), RandomForestClassifier(max_depth=n_depth)]
+    }
 
     color_feature_train = color_feature_extractor(img_train)
     shape_feature_train = shape_feature_extractor(img_train)
@@ -117,6 +125,7 @@ def late_fusion(img_train, label_train, img_test, label_test, color_feature_extr
             img_test)), clf[1].predict_proba(shape_feature_test), color_labels, shape_labels)
 
         accuracy = get_accuracy(prediction, label_test)
+        print(f"late fusion {name} accuracy = {accuracy}\n")
 
         if accuracy > best_accuracy:
             print(f"Save current best accuracy ({name} classifier) ...")
@@ -125,7 +134,6 @@ def late_fusion(img_train, label_train, img_test, label_test, color_feature_extr
             pickle.dump(clf, open(f"{cwd}/clf.pkl", "wb"))
 
         # dump_results(prediction, label_test, f"{name}-results")
-
 
 def stacking_early_fusion(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor, random_seed, n_estimators, cv, ponderation):
     cwd = os.getcwd()
@@ -141,25 +149,19 @@ def stacking_early_fusion(img_train, label_train, img_test, label_test, color_fe
 
     def base_model():
         level0 = list()
-        # level0.append(('svm', SVM())) # FIXME: Not converging, Remove it ?
         level0.append(('cart', DecisionTreeClassifier()))
         level0.append(('rf', RandomForestClassifier(
             n_estimators=n_estimators, random_state=random_seed)))
-        # level0.append(('svr', LinearSVC(random_state=random_seed))) # FIXME: Not converging, Remove it ?
 
         model = StackingClassifier(
             estimators=level0, final_estimator=LogisticRegression(), cv=cv)
         return model
-
+    
     def model_with_pipeline():
         level0 = list()
-        # level0.append(('svm', SVM()))
         level0.append(('cart', DecisionTreeClassifier()))
-        # level0.append(('rf', RandomForestClassifier(n_estimators=n_estimators, random_state=random_seed)))
-        level0.append(('svr', make_pipeline(StandardScaler(),
-                      LinearSVC(random_state=random_seed, max_iter=10000))))
-        model = StackingClassifier(
-            estimators=level0, final_estimator=LogisticRegression(), cv=cv)
+        level0.append(('svr', make_pipeline(StandardScaler(), LinearSVC(random_state=42))))
+        model = StackingClassifier(estimators=level0, final_estimator=LogisticRegression(), cv=cv)
         return model
 
     feature_train = fused_feature_extractor(img_train)
@@ -167,17 +169,65 @@ def stacking_early_fusion(img_train, label_train, img_test, label_test, color_fe
 
     stacking_clf = base_model()
     train(stacking_clf, feature_train, label_train)
-    prediction, accuracy = evaluate(
+    prediction1, accuracy1 = evaluate(
         stacking_clf, feature_test, label_test)
-    print(f"stacking clf accuracy = {accuracy}\n")
-    # dump_results(prediction, label_test, f"results")
+    print(f"stacking early clf accuracy = {accuracy1}\n")
 
     stacking_clf_with_pipeline = model_with_pipeline()
-    train(stacking_clf_with_pipeline,
-          feature_train, label_train)
-    prediction, accuracy = evaluate(
+    train(stacking_clf_with_pipeline, feature_train, label_train)
+    prediction2, accuracy2 = evaluate(
         stacking_clf_with_pipeline, feature_test, label_test)
-    print(f"stacking clf with pipeline accuracy = {accuracy}\n")
-    pickle.dump(stacking_clf_with_pipeline, open(f"{cwd}/clf.pkl", "wb"))
+    print(f"stacking early with pipeline clf accuracy = {accuracy2}\n")
 
-    # dump_results(prediction, label_test, f"results")
+    if accuracy1 >= accuracy2:
+        pickle.dump(stacking_clf, open(f"{cwd}/clf.pkl", "wb"))
+    else:
+        pickle.dump(stacking_clf_with_pipeline, open(f"{cwd}/clf.pkl", "wb"))
+
+def stacking_late_fusion(img_train, label_train, img_test, label_test, color_feature_extractor, shape_feature_extractor, random_seed, n_estimators, cv, ponderation):
+    cwd = os.getcwd()
+    # During developpement
+    if cwd != "/app":
+        cwd += "/app"
+
+    def base_model():
+        level0 = list()
+        level0.append(('cart', DecisionTreeClassifier()))
+        level0.append(('rf', RandomForestClassifier(
+            n_estimators=n_estimators, random_state=random_seed)))
+
+        model = StackingClassifier(
+            estimators=level0, final_estimator=LogisticRegression(), cv=cv)
+        return model
+
+    def soft_voting(color_predict_proba, shape_predict_proba, color_labels, shape_labels):
+        def get_max_proba_indices(color_predict_proba, shape_predict_proba):
+            classes_pred_proba = 0.6 * color_predict_proba + 0.4 * shape_predict_proba
+            return np.argmax(classes_pred_proba, axis=1)
+
+        max_proba_indces = get_max_proba_indices(
+            color_predict_proba, shape_predict_proba)
+        return max_proba_indces + 1
+
+    color_feature_train = color_feature_extractor(img_train)
+    shape_feature_train = shape_feature_extractor(img_train)
+
+    color_feature_test = color_feature_extractor(img_test)
+    shape_feature_test = shape_feature_extractor(img_test)
+
+    color_stacking_clf = base_model()
+    shape_stacking_clf = base_model()
+
+    train(color_stacking_clf, color_feature_train, label_train)
+    train(shape_stacking_clf, shape_feature_train, label_train)
+
+    color_labels = color_stacking_clf.predict(color_feature_test)
+    shape_labels = shape_stacking_clf.predict(shape_feature_test)
+
+    prediction = soft_voting(color_stacking_clf.predict_proba(color_feature_extractor(
+        img_test)), shape_stacking_clf.predict_proba(shape_feature_test), color_labels, shape_labels)
+    accuracy = get_accuracy(prediction, label_test)
+
+    print(f"stacking late clf accuracy = {accuracy}\n")
+
+    pickle.dump(stacking_late_fusion, open(f"{cwd}/clf.pkl", "wb"))
