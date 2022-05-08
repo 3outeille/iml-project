@@ -14,7 +14,7 @@ PONDERATION = 0.4
 RANDOM_SEED = 40
 N_NEIGHBORS = 3
 N_DEPTH = 8
-TRANSFORMATION_PER_IMG = 0
+TRANSFORMATION_PER_IMG = 20
 N_ESTIMATORS = 10
 CROSS_VALIDATION = 4
 MODE = 'moments'
@@ -169,11 +169,11 @@ if __name__ == "__main__":
     early_fusion(img_train_aug, label_train_aug, img_test, label_test,
                  color_feature_extractor, shape_feature_extractor, n_neighbors=N_NEIGHBORS, n_depth=N_DEPTH, ponderation=PONDERATION)
 
-    late_fusion(img_train_aug, label_train_aug, img_test, label_test,
-                color_feature_extractor, shape_feature_extractor, n_neighbors=N_NEIGHBORS, n_depth=N_DEPTH)
+    # late_fusion(img_train_aug, label_train_aug, img_test, label_test,
+    #             color_feature_extractor, shape_feature_extractor, n_neighbors=N_NEIGHBORS, n_depth=N_DEPTH)
 
-    stacking_early_fusion(img_train_aug, label_train_aug, img_test, label_test, color_feature_extractor,
-                             shape_feature_extractor, random_seed=RANDOM_SEED, n_estimators=N_ESTIMATORS, cv=CROSS_VALIDATION, ponderation=PONDERATION)
+    # stacking_early_fusion(img_train_aug, label_train_aug, img_test, label_test, color_feature_extractor,
+    #                          shape_feature_extractor, random_seed=RANDOM_SEED, n_estimators=N_ESTIMATORS, cv=CROSS_VALIDATION, ponderation=PONDERATION)
 
-    stacking_late_fusion(img_train_aug, label_train_aug, img_test, label_test, color_feature_extractor,
-                             shape_feature_extractor, random_seed=RANDOM_SEED, n_estimators=N_ESTIMATORS, cv=CROSS_VALIDATION, ponderation=PONDERATION)
+    # stacking_late_fusion(img_train_aug, label_train_aug, img_test, label_test, color_feature_extractor,
+    #                          shape_feature_extractor, random_seed=RANDOM_SEED, n_estimators=N_ESTIMATORS, cv=CROSS_VALIDATION, ponderation=PONDERATION)

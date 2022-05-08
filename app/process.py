@@ -24,7 +24,7 @@ import numpy as np
 import cv2
 # import skimage
 import pickle
-
+import time
 
 class MyClassifier:
     """Sample classifier class to update.
@@ -59,8 +59,9 @@ class MyClassifier:
         def fused_feature_extractor(x):
             return np.hstack((color_feature_extractor(x) * PONDERATION, shape_feature_extractor(x) * (1 - PONDERATION)))
 
-        return self.clf.predict(fused_feature_extractor([img]))[0]
-
+        prediction = self.clf.predict(fused_feature_extractor([img]))[0]
+        
+        return prediction
 
 def save_classifications(image_classes: Dict[str, int], output_path: str):
     """Save classification results to a CSV file
@@ -114,6 +115,8 @@ def main():
     results = {}
     print("Processing files...")
 
+    begin = time.time()
+
     for file in files:
         print(file)
         file_full_path = os.path.join(args.test_dir, file)
@@ -126,6 +129,9 @@ def main():
             raise
         results[file] = cls_id
     print("Done processing files.")
+
+    end = time.time()
+    print(f"Prediciton time {end-begin} for {len(files)} images")
 
     # Save predictions
     save_classifications(results, args.output)
