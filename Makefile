@@ -1,9 +1,10 @@
 PATH_TO_TEST_SET = ${PWD}/data
 PATH_TO_STUDENT_CODE = ${PWD}/app
 PATH_TO_STUDENT_OUTPUT_DIR = ${PWD}/output
+PATH_TO_TEST_SET_GT = ${PWD}
 
-train:
-	python app/main.py
+build:
+	docker build -t jchazalon/imleval .
 
 predict:
 	docker run --rm -it \
@@ -17,11 +18,9 @@ predict:
 		python3 process.py --test_dir /data --output /output/result.csv
 
 submission:
-	python autoeval.py --ground_truth gt.txt --submission output/result.csv
+	python autoeval.py --ground_truth ${PATH_TO_TEST_SET_GT}/gt.txt --submission ${PATH_TO_STUDENT_OUTPUT_DIR}/result.csv
 
-clean-app:
-	rm app/*.pkl
 clean:
-	rm -rf *-results *.egg-info app/*.csv output/*.csv *.png 
+	rm output/*.csv data/*  
 
 PHONY: clean
