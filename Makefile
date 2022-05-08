@@ -5,7 +5,7 @@ PATH_TO_STUDENT_OUTPUT_DIR = ${PWD}/output
 train:
 	python app/main.py
 
-predict-docker:
+predict:
 	docker run --rm -it \
 		-v ${PATH_TO_TEST_SET}:/data:ro \
 		-v ${PATH_TO_STUDENT_CODE}:/app:ro \
@@ -16,17 +16,12 @@ predict-docker:
 		jchazalon/imleval \
 		python3 process.py --test_dir /data --output /output/result.csv
 
-predict:
-	python app/process.py  --test_dir data --output output/result.csv
-
 submission:
 	python autoeval.py --ground_truth gt.txt --submission output/result.csv
 
-clean-output:
-	rm output/*.csv
 clean-app:
 	rm app/*.pkl
 clean:
-	rm -rf *-results *.egg-info app/*.pkl app/*.csv output/*. *.csv *.png 
+	rm -rf *-results *.egg-info app/*.csv output/*.csv *.png 
 
 PHONY: clean
