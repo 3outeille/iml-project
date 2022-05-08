@@ -156,24 +156,24 @@ if __name__ == "__main__":
     print('Loading dataset...')
     dataset, labels = load_dataset("./dataset/train")
     print('Dataset augmentation...')
-    dataset_aug, labels_aug = dataset_augmentation(
-        dataset, labels, TRANSFORMATION_PER_IMG)
 
     img_train, img_test, label_train, label_test = train_test_split(
-        dataset_aug, labels_aug, test_size=0.2, random_state=RANDOM_SEED, stratify=labels_aug)
+        dataset, labels, test_size=0.2, random_state=RANDOM_SEED, stratify=labels)
+
+    img_train_aug, label_train_aug = dataset_augmentation(img_train, label_train, TRANSFORMATION_PER_IMG)
 
     print("Create feature extractor ...\n")
     color_feature_extractor, shape_feature_extractor = feature_extractor(
-        img_train, load_session=LOAD_SESSION, mode=MODE)
+        img_train_aug, load_session=LOAD_SESSION, mode=MODE)
 
-    early_fusion(img_train, label_train, img_test, label_test,
+    early_fusion(img_train_aug, label_train_aug, img_test, label_test,
                  color_feature_extractor, shape_feature_extractor, n_neighbors=N_NEIGHBORS, n_depth=N_DEPTH, ponderation=PONDERATION)
 
-    late_fusion(img_train, label_train, img_test, label_test,
+    late_fusion(img_train_aug, label_train_aug, img_test, label_test,
                 color_feature_extractor, shape_feature_extractor, n_neighbors=N_NEIGHBORS, n_depth=N_DEPTH)
 
-    stacking_early_fusion(img_train, label_train, img_test, label_test, color_feature_extractor,
+    stacking_early_fusion(img_train_aug, label_train_aug, img_test, label_test, color_feature_extractor,
                              shape_feature_extractor, random_seed=RANDOM_SEED, n_estimators=N_ESTIMATORS, cv=CROSS_VALIDATION, ponderation=PONDERATION)
 
-    stacking_late_fusion(img_train, label_train, img_test, label_test, color_feature_extractor,
+    stacking_late_fusion(img_train_aug, label_train_aug, img_test, label_test, color_feature_extractor,
                              shape_feature_extractor, random_seed=RANDOM_SEED, n_estimators=N_ESTIMATORS, cv=CROSS_VALIDATION, ponderation=PONDERATION)
