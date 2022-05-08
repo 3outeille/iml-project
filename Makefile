@@ -1,7 +1,7 @@
 PATH_TO_TEST_SET = ${PWD}/data
 PATH_TO_STUDENT_CODE = ${PWD}/app
 PATH_TO_STUDENT_OUTPUT_DIR = ${PWD}/output
-PATH_TO_TEST_SET_GT = ${PWD}/data
+PATH_TO_TEST_SET_GT = ${PWD}
 
 build:
 	docker build -t jchazalon/imleval .
