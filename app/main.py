@@ -154,7 +154,7 @@ if __name__ == "__main__":
     np.random.seed(RANDOM_SEED)
 
     print('Loading dataset...')
-    dataset, labels = load_dataset("./dataset/train")
+    dataset, labels = load_dataset("./data/train")
     print('Dataset augmentation...')
 
     img_train, img_test, label_train, label_test = train_test_split(
